@@ -2,28 +2,265 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Моя Игра</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script> <!-- Подключаем Telegram SDK -->
-    <style> body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: var(--tg-theme-bg-color); font-family: sans-serif; } button { padding: 20px 40px; font-size: 24px; background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); border: none; border-radius: 16px; cursor: pointer; } .score { font-size: 32px; margin-bottom: 20px; color: var(--tg-theme-text-color); } </style>
+    <title>Угадай число | TravelSMM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: var(--tg-theme-bg-color, #0f172a);
+            color: var(--tg-theme-text-color, #ffffff);
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .game-container {
+            max-width: 500px;
+            width: 100%;
+            background: var(--tg-theme-secondary-bg-color, #1e293b);
+            border-radius: 32px;
+            padding: 24px 20px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+            text-align: center;
+            backdrop-filter: blur(2px);
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #2dd4bf, #0ea5e9);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .sub {
+            color: var(--tg-theme-hint-color, #94a3b8);
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+        }
+
+        .range {
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 8px 16px;
+            border-radius: 40px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .attempts {
+            font-size: 1rem;
+            margin-bottom: 20px;
+            background: #0f172a;
+            padding: 8px;
+            border-radius: 28px;
+            display: inline-block;
+            width: auto;
+            min-width: 140px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        input {
+            flex: 1;
+            min-width: 150px;
+            padding: 14px 20px;
+            font-size: 1.2rem;
+            text-align: center;
+            background: var(--tg-theme-bg-color, #0f172a);
+            border: 1px solid #334155;
+            color: var(--tg-theme-text-color, #fff);
+            border-radius: 60px;
+            outline: none;
+            font-weight: 500;
+        }
+
+        input:focus {
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 2px rgba(14,165,233,0.3);
+        }
+
+        button {
+            background: #0ea5e9;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 60px;
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        button.secondary {
+            background: #334155;
+        }
+
+        .message {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 40px;
+            margin: 16px 0;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 12px;
+        }
+
+        footer {
+            margin-top: 24px;
+            font-size: 0.75rem;
+            color: var(--tg-theme-hint-color, #64748b);
+        }
+
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 20px 16px;
+            }
+            button {
+                padding: 10px 20px;
+            }
+        }
+    </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div style="text-align: center;">
-        <div class="score">Score: 0</div>
-        <button id="clickBtn">Нажми меня!</button>
+    <div class="game-container">
+        <h1>🔢 Угадай число</h1>
+        <div class="sub">Telegram Mini App</div>
+        <div class="range">🎯 Диапазон: 1 – 100</div>
+        <div class="attempts">📊 Попыток: <span id="attemptCount">0</span></div>
+        <div class="input-group">
+            <input type="number" id="guessInput" placeholder="Введите число" min="1" max="100">
+            <button id="guessBtn">➡️ Угадать</button>
+        </div>
+        <div id="messageBox" class="message">✨ Введи число и нажми "Угадать"</div>
+        <div class="actions">
+            <button id="newGameBtn" class="secondary">🔄 Новая игра</button>
+        </div>
+        <footer>🎲 Подсказки помогут найти число быстрее!</footer>
     </div>
 
     <script>
-        let tg = window.Telegram.WebApp;  // Получаем объект WebApp
-        tg.expand();                      // Разворачиваем приложение на весь экран
-        
-        let score = 0;
-        const scoreElement = document.querySelector('.score');
-        document.getElementById('clickBtn').onclick = () => {
-            score++;
-            scoreElement.textContent = `Score: ${score}`;
-            tg.HapticFeedback.impactOccurred('light'); // Вибрация при клике (поддержка SDK)
-        };
+        // --- Игровая логика ---
+        let secretNumber = Math.floor(Math.random() * 100) + 1;
+        let attempts = 0;
+        let gameActive = true;
+
+        // --- Элементы DOM ---
+        const guessInput = document.getElementById('guessInput');
+        const guessBtn = document.getElementById('guessBtn');
+        const newGameBtn = document.getElementById('newGameBtn');
+        const attemptSpan = document.getElementById('attemptCount');
+        const messageDiv = document.getElementById('messageBox');
+
+        // --- Инициализация Telegram WebApp ---
+        const tg = window.Telegram.WebApp;
+        tg.expand();        // растягиваем мини-приложение на весь экран
+        tg.ready();         // сообщаем, что приложение загружено
+
+        // Опционально: можно использовать цветовую тему Telegram
+        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#0f172a');
+        document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#ffffff');
+        document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#94a3b8');
+        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#1e293b');
+
+        // --- Функция обновления интерфейса ---
+        function updateUI() {
+            attemptSpan.innerText = attempts;
+            guessInput.value = '';
+            guessInput.focus();
+        }
+
+        // --- Проверка и основной игровой цикл ---
+        function handleGuess() {
+            if (!gameActive) {
+                messageDiv.innerHTML = '⚠️ Игра окончена. Нажми "Новая игра"!';
+                return;
+            }
+
+            let rawValue = guessInput.value.trim();
+            if (rawValue === '') {
+                messageDiv.innerHTML = '❌ Введите число от 1 до 100';
+                return;
+            }
+            let userGuess = Number(rawValue);
+            if (isNaN(userGuess) || userGuess < 1 || userGuess > 100) {
+                messageDiv.innerHTML = '❌ Число должно быть в диапазоне 1–100';
+                return;
+            }
+
+            attempts++;
+            updateUI();
+
+            if (userGuess === secretNumber) {
+                messageDiv.innerHTML = `🎉 ПОБЕДА! 🎉\nТы угадал число ${secretNumber} за ${attempts} попыток! 🏆`;
+                gameActive = false;
+                // Отправляем данные в Telegram (можно передать статистику)
+                tg.sendData(JSON.stringify({ event: 'win', attempts: attempts, number: secretNumber }));
+                return;
+            } 
+            else if (userGuess < secretNumber) {
+                messageDiv.innerHTML = `📈 Загаданное число БОЛЬШЕ, чем ${userGuess}. Попробуй ещё!`;
+            } 
+            else {
+                messageDiv.innerHTML = `📉 Загаданное число МЕНЬШЕ, чем ${userGuess}. Попробуй ещё!`;
+            }
+
+            // Если не угадал – дать подсказку по диапазону (остается активным)
+            guessInput.focus();
+        }
+
+        // --- Новая игра ---
+        function newGame() {
+            secretNumber = Math.floor(Math.random() * 100) + 1;
+            attempts = 0;
+            gameActive = true;
+            updateUI();
+            messageDiv.innerHTML = '🎲 Новая игра! Загадано число от 1 до 100. Удачи!';
+            guessInput.focus();
+            tg.sendData(JSON.stringify({ event: 'new_game' }));
+        }
+
+        // --- Обработчики событий ---
+        guessBtn.addEventListener('click', handleGuess);
+        newGameBtn.addEventListener('click', newGame);
+        guessInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleGuess();
+            }
+        });
+
+        // Начальная установка UI
+        updateUI();
     </script>
 </body>
 </html>
